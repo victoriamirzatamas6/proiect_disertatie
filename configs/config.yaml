@@ -1,0 +1,54 @@
+seed: 42
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  fd: FD001
+
+split:
+  train_units_ratio: 0.8
+
+preprocess:
+  scaler: standard
+  drop_constant_cols: true
+
+rul:
+  cap: 125
+
+features:
+  window_sizes: [20, 30, 50]
+  step: 1
+
+baseline:
+  params:
+    n_estimators: 500
+    max_depth: 5
+    learning_rate: 0.05
+    subsample: 0.9
+    colsample_bytree: 0.9
+    reg_lambda: 1.0
+
+lstm:
+  window_sizes: [20, 30, 50]
+  hidden_size: 64
+  num_layers: 2
+  dropout: 0.2
+  lr: 0.001
+  batch_size: 256
+  epochs: 25
+  patience: 5
+
+anomaly:
+  window_size: 30
+  latent_dim: 16
+  hidden_dim: 96
+  lr: 0.001
+  batch_size: 256
+  epochs: 20
+  patience: 5
+  threshold_percentiles: [95, 97, 99]
+  train_normal_only: true
+  normal_cycles_ratio: 0.4
+
+tracking:
+  enabled: true
