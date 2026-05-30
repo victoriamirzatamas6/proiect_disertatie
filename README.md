@@ -28,6 +28,23 @@ The platform integrates:
 The framework is designed for research reproducibility, industrial-grade
 experimentation, and explainable AI in predictive maintenance.
 
+### Key Results (NASA CMAPSS FD001, window=30)
+
+| Model | MAE (window) | RMSE (window) | MAE (unit-last) | RMSE (unit-last) |
+|-------|-------------|--------------|----------------|-----------------|
+| XGBoost | **10.54** | **14.04** | 10.22 | 13.24 |
+| LSTM | **9.87** | 15.06 | 12.10 | 16.42 |
+
+LSTM improves MAE by ~6% over the XGBoost baseline. XGBoost shows better
+unit-last metrics, indicating stronger robustness in the critical near-failure zone.
+
+**Anomaly Detection** (p99 threshold on test set):
+
+| Method | Alarm Rate |
+|--------|-----------|
+| Autoencoder | 1.35% |
+| PCA Baseline | 1.20% |
+
 ------------------------------------------------------------------------
 
 ## 2. Problem Formulation
@@ -118,7 +135,6 @@ Two evaluation granularities:
 
 -   RMSE
 -   MAE
--   R²
 
 #### Unit-Level Metrics (Last Cycle Only)
 
@@ -161,7 +177,7 @@ importance plots - Anomaly distributions - Configuration snapshot
 
 Global summary file:
 
-outputs/runs.csv
+outputs/runs/runs.csv
 
 This enables comparative benchmarking and reproducibility.
 
@@ -169,14 +185,17 @@ This enables comparative benchmarking and reproducibility.
 
 ## 7. Automated Reporting
 
-After running the full pipeline:
+After running the full pipeline, a report is generated automatically in
+`outputs/report/`. You can also run it standalone:
 
-python -m src.pipeline.make_report --pdf
+```bash
+python -m src.pipeline.make_report
+```
 
 Generated outputs:
 
--   outputs/report/report.html
--   outputs/report/report.pdf (if reportlab installed)
+-   `outputs/report/report.html`
+-   `outputs/report/report.pdf`
 
 The report includes: - Model performance comparison - Window-size
 ablation results - Feature importance analysis - Anomaly threshold
@@ -186,15 +205,19 @@ evaluation - Alarm rate analysis - Experimental conclusions
 
 ## 8. Installation
 
-Python 3.9+
+**Python 3.10+** required.
 
+```bash
 pip install -r requirements.txt
+```
 
 ------------------------------------------------------------------------
 
 ## 9. Running the Pipeline
 
+```bash
 python -m src.pipeline.run_all --config configs/config.yaml
+```
 
 Pipeline stages: 1. Data loading 2. Preprocessing 3. Window generation
 4. Model training 5. Evaluation 6. Explainability 7. Anomaly detection
@@ -204,7 +227,9 @@ Pipeline stages: 1. Data loading 2. Preprocessing 3. Window generation
 
 ## 10. Interactive Dashboard
 
+```bash
 streamlit run app/streamlit_app.py
+```
 
 Dashboard capabilities: - Model selection (XGB / LSTM) - Window-size
 comparison - Threshold selection (95/97/99) - Visualization of RUL
@@ -215,8 +240,72 @@ Export of results
 
 ## 11. Project Structure
 
-pdm-platform-plus/ │ ├── data/ │ └── raw/ ├── configs/ │ └── config.yaml
-├── src/ ├── app/ ├── outputs/ ├── requirements.txt └── README.md
+```
+pdm-platform-plus/
+│
+├── app/
+│   └── streamlit_app.py          # Interactive Streamlit dashboard
+│
+├── configs/
+│   └── config.yaml               # Centralized experiment configuration
+│
+├── data/
+│   ├── raw/
+│   │   ├── train_FD001.txt
+│   │   ├── test_FD001.txt
+│   │   └── RUL_FD001.txt
+│   └── processed/                # Reserved (not populated by pipeline)
+│
+├── docs/
+│   └── Documentatie_*.docx       # Dissertation document (gitignored)
+│
+├── outputs/                      # All generated artifacts (gitignored)
+│   ├── anomaly/
+│   ├── figures/
+│   ├── metrics/
+│   ├── models/
+│   ├── predictions/
+│   ├── report/
+│   └── runs/
+│
+├── scripts/                      # Standalone figure generation scripts
+│   ├── compute_metrics.py
+│   ├── fig_6_2_correlation.py
+│   ├── fig_6_3_sensor_trends.py
+│   ├── fig_6_4_rul_distribution.py
+│   ├── fig_6_5_xgb_scatter.py
+│   ├── fig_6_11_error_distribution.py
+│   ├── fig_6_12_error_vs_rul.py
+│   └── make_fig_6_13.py
+│
+├── src/
+│   ├── data/
+│   │   ├── cmapss_loader.py      # Dataset loading
+│   │   ├── features.py           # Window feature engineering
+│   │   ├── preprocess.py         # Normalization / scaling
+│   │   └── split.py              # Train/validation split by unit
+│   ├── experiments/
+│   │   ├── report.py             # HTML/PDF report generation
+│   │   └── tracking.py           # Experiment versioning
+│   ├── models/
+│   │   ├── anomaly_autoencoder.py
+│   │   ├── anomaly_pca.py
+│   │   ├── baseline_xgb.py
+│   │   ├── explain_xgb.py
+│   │   └── lstm_rul.py
+│   ├── pipeline/
+│   │   ├── make_report.py        # Standalone report generation entry point
+│   │   └── run_all.py            # Full pipeline entry point
+│   └── utils/
+│       ├── io.py
+│       ├── metrics.py
+│       ├── plotting.py
+│       └── seed.py
+│
+├── .gitignore
+├── README.md
+└── requirements.txt
+```
 
 ------------------------------------------------------------------------
 

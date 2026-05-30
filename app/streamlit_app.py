@@ -8,12 +8,34 @@ st.title("PdM Platform+ – CMAPSS FD001")
 
 st.sidebar.header("Controls")
 
-rul_xgb = pd.read_csv("outputs/predictions/rul_baseline_xgb.csv") if st.sidebar.checkbox("Load XGB", True) else None
-rul_lstm = pd.read_csv("outputs/predictions/rul_lstm.csv") if st.sidebar.checkbox("Load LSTM", True) else None
-anom = pd.read_csv("outputs/anomaly/anomaly_scores.csv")
+load_xgb = st.sidebar.checkbox("Load XGB", True)
+load_lstm = st.sidebar.checkbox("Load LSTM", True)
 
-with open("outputs/metrics/summary.json", "r", encoding="utf-8") as f:
-    summary = json.load(f)
+rul_xgb = None
+if load_xgb:
+    try:
+        rul_xgb = pd.read_csv("outputs/predictions/rul_baseline_xgb.csv")
+    except FileNotFoundError:
+        st.sidebar.warning("rul_baseline_xgb.csv not found. Run the pipeline first.")
+
+rul_lstm = None
+if load_lstm:
+    try:
+        rul_lstm = pd.read_csv("outputs/predictions/rul_lstm.csv")
+    except FileNotFoundError:
+        st.sidebar.warning("rul_lstm.csv not found. Run the pipeline first.")
+
+try:
+    anom = pd.read_csv("outputs/anomaly/anomaly_scores.csv")
+except FileNotFoundError:
+    st.error("anomaly_scores.csv not found. Run the pipeline first: python -m src.pipeline.run_all")
+    st.stop()
+
+try:
+    with open("outputs/metrics/summary.json", "r", encoding="utf-8") as f:
+        summary = json.load(f)
+except FileNotFoundError:
+    summary = {}
 
 units = sorted(set(anom["unit_id"].unique()))
 unit = st.sidebar.selectbox("Select unit_id", units)

@@ -18,7 +18,7 @@ from src.data.features import make_tabular_window_features, last_window_per_unit
 from src.models.baseline_xgb import train_xgb, predict
 from src.models.explain_xgb import xgb_gain_importance, permutation_importance_reg
 from src.models.lstm_rul import make_sequences, train_lstm, predict_lstm
-from src.models.anomaly_autoencoder import make_flat_windows as ae_make_flat_windows, fit_and_score as ae_fit_and_score
+from src.models.anomaly_autoencoder import make_flat_windows as ae_make_flat_windows, fit_and_score as ae_fit_and_score, _filter_normal_part as ae_filter_normal_part
 from src.models.anomaly_pca import fit_pca_reconstruction, reconstruction_error as pca_recon_err
 
 from src.experiments.tracking import new_run_dir, snapshot_config, write_run_summary, append_runs_csv
@@ -128,9 +128,9 @@ def main():
         lstm_cfg = dict(cfg["lstm"])
         lstm_cfg["window_size"] = int(w)
 
-        Xtr, ytr, _ = make_sequences(df_train_s, feat_cols, int(w), cap)
-        Xva, yva, _ = make_sequences(df_valid_s, feat_cols, int(w), cap)
-        Xte, yte, meta = make_sequences(df_test_s,  feat_cols, int(w), cap)
+        Xtr, ytr, _ = make_sequences(df_train_s, feat_cols, int(w), cap, step=step)
+        Xva, yva, _ = make_sequences(df_valid_s, feat_cols, int(w), cap, step=step)
+        Xte, yte, meta = make_sequences(df_test_s,  feat_cols, int(w), cap, step=step)
 
         model = train_lstm(Xtr, ytr, Xva, yva, lstm_cfg)
         pred = predict_lstm(model, Xte)
@@ -156,15 +156,17 @@ def main():
     # Anomalies: AE + PCA
     an_cfg = cfg["anomaly"]
     ae_w = int(an_cfg["window_size"])
-    Xtr_flat, _ = ae_make_flat_windows(df_train_s, feat_cols, ae_w)
-    Xte_flat, meta_te = ae_make_flat_windows(df_test_s,  feat_cols, ae_w)
 
     ae_model, ae_train, ae_test, meta_te = ae_fit_and_score(df_train_s, df_test_s, feat_cols, an_cfg)
     torch.save(ae_model.state_dict(), "outputs/models/ae.pt")
     save_score_hist(ae_train, ae_test, "AE score distribution (train vs test)", "outputs/figures/ae_score_hist.png")
 
-    pca = fit_pca_reconstruction(Xtr_flat, n_components=10, seed=int(cfg["seed"]))
-    pca_train = pca_recon_err(pca, Xtr_flat)
+    # PCA trained on same normal subset as AE for a fair comparison
+    df_normal_pca = ae_filter_normal_part(df_train_s, float(an_cfg["normal_cycles_ratio"])) if bool(an_cfg.get("train_normal_only", False)) else df_train_s
+    Xtr_normal, _ = ae_make_flat_windows(df_normal_pca, feat_cols, ae_w)
+    Xte_flat, _ = ae_make_flat_windows(df_test_s, feat_cols, ae_w)
+    pca = fit_pca_reconstruction(Xtr_normal, n_components=10, seed=int(cfg["seed"]))
+    pca_train = pca_recon_err(pca, Xtr_normal)
     pca_test  = pca_recon_err(pca, Xte_flat)
     save_score_hist(pca_train, pca_test, "PCA score distribution (train vs test)", "outputs/figures/pca_score_hist.png")
 

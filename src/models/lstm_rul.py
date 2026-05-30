@@ -24,14 +24,14 @@ class LSTMRegressor(nn.Module):
         out, _ = self.lstm(x)
         return self.head(out[:, -1, :]).squeeze(1)
 
-def make_sequences(df, feature_cols, window: int, cap_rul: int | None):
+def make_sequences(df, feature_cols, window: int, cap_rul: int | None, step: int = 1):
     X_list, y_list, meta = [], [], []
     for unit_id, g in df.groupby("unit_id"):
         g = g.sort_values("cycle")
         vals = g[feature_cols].values
         rul  = g["RUL"].values
         cyc  = g["cycle"].values
-        for end in range(window, len(g) + 1):
+        for end in range(window, len(g) + 1, step):
             X_list.append(vals[end-window:end, :])
             y = float(rul[end-1])
             if cap_rul is not None:
