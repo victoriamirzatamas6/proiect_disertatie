@@ -219,6 +219,8 @@ pip install -r requirements.txt
 python -m src.pipeline.run_all --config configs/config.yaml
 ```
 
+The pipeline uses a simple cache by default and will skip rerunning work if the raw data and configuration are unchanged. Use `--force` to ignore cache and rerun everything.
+
 Pipeline stages: 1. Data loading 2. Preprocessing 3. Window generation
 4. Model training 5. Evaluation 6. Explainability 7. Anomaly detection
 8. Artifact storage 9. Report generation

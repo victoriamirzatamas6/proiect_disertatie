@@ -4,7 +4,9 @@ import joblib
 import torch
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
+from src.pipeline.cache import is_cache_valid, outputs_exist, write_cache_manifest
 from src.utils.io import load_config, ensure_dirs, save_json
 from src.utils.seed import set_seed
 from src.utils.metrics import mae, rmse
@@ -52,11 +54,41 @@ def unit_level_metrics(df_windows: pd.DataFrame, pred_col: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/config.yaml")
+    ap.add_argument("--force", action="store_true", help="Ignore cache and rerun the pipeline.")
     args = ap.parse_args()
     cfg = load_config(args.config)
     set_seed(int(cfg["seed"]))
 
     ensure_dirs("outputs/models","outputs/metrics","outputs/predictions","outputs/anomaly","outputs/figures","outputs/runs")
+
+    cache_manifest = Path("outputs/pipeline_cache.json")
+    expected_outputs = [
+        "outputs/models/preprocess.joblib",
+        "outputs/models/xgb.json",
+        "outputs/models/lstm.pt",
+        "outputs/models/ae.pt",
+        "outputs/predictions/rul_baseline_xgb.csv",
+        "outputs/predictions/rul_lstm.csv",
+        "outputs/anomaly/anomaly_scores.csv",
+        "outputs/metrics/ablation_results.csv",
+        "outputs/metrics/anomaly_alarm_rates.csv",
+        "outputs/metrics/summary.json",
+        "outputs/figures/xgb_gain_importance.png",
+        "outputs/figures/xgb_permutation_importance.png",
+        "outputs/figures/ae_score_hist.png",
+        "outputs/figures/pca_score_hist.png",
+    ]
+    if not args.force:
+        if cache_manifest.exists():
+            print("Cache manifest found: outputs/pipeline_cache.json")
+            if is_cache_valid(str(cache_manifest), args.config, cfg["data"]["raw_dir"], expected_outputs):
+                print("Cache valid. Skipping pipeline because inputs/config are unchanged and output artifacts already exist.")
+                return
+            print("Cache manifest exists but is invalid. Re-running pipeline to refresh outputs.")
+        elif outputs_exist(expected_outputs):
+            print("Outputs exist but cache manifest is missing. Creating cache manifest and skipping pipeline.")
+            write_cache_manifest(str(cache_manifest), args.config, cfg["data"]["raw_dir"], expected_outputs)
+            return
 
     run_dir = None
     if cfg.get("tracking", {}).get("enabled", True):
@@ -198,6 +230,9 @@ def main():
         "anomaly_alarm_rates_csv": "outputs/metrics/anomaly_alarm_rates.csv",
     }
     save_json("outputs/metrics/summary.json", summary)
+
+    cache_manifest = "outputs/pipeline_cache.json"
+    write_cache_manifest(cache_manifest, args.config, cfg["data"]["raw_dir"], expected_outputs)
 
     if run_dir is not None:
         for f in [
