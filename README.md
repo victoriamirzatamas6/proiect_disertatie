@@ -80,9 +80,7 @@ Simulated turbofan engine degradation dataset.
 
 ### 3.2 Required Files
 
-Place the following files inside:
-
-data/raw/
+Place the following files inside `data/raw/`:
 
 Required files:
 
@@ -90,7 +88,17 @@ Required files:
 -   test_FD001.txt
 -   RUL_FD001.txt
 
-### 3.3 Dataset Characteristics (FD001)
+### 3.3 Processed Output
+
+After running the pipeline, `data/processed/` will contain:
+
+-   `train_normalized.csv` — Normalized training data
+-   `valid_normalized.csv` — Normalized validation data
+-   `test_normalized.csv` — Normalized test data
+-   `xgb_features_w*.csv` — XGBoost features for window sizes (20, 30, 50)
+-   `lstm_sequences_w*.csv` — LSTM sequence metadata for window sizes
+
+### 3.4 Dataset Characteristics (FD001)
 
 -   100 training engines
 -   100 test engines
@@ -256,7 +264,12 @@ pdm-platform-plus/
 │   │   ├── train_FD001.txt
 │   │   ├── test_FD001.txt
 │   │   └── RUL_FD001.txt
-│   └── processed/                # Reserved (not populated by pipeline)
+│   └── processed/                # Processed data output
+│       ├── train_normalized.csv
+│       ├── valid_normalized.csv
+│       ├── test_normalized.csv
+│       ├── xgb_features_w*.csv
+│       └── lstm_sequences_w*.csv
 │
 ├── docs/
 │   └── Documentatie_*.docx       # Dissertation document (gitignored)

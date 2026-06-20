@@ -59,7 +59,7 @@ def main():
     cfg = load_config(args.config)
     set_seed(int(cfg["seed"]))
 
-    ensure_dirs("outputs/models","outputs/metrics","outputs/predictions","outputs/anomaly","outputs/figures","outputs/runs")
+    ensure_dirs("outputs/models","outputs/metrics","outputs/predictions","outputs/anomaly","outputs/figures","outputs/runs","data/processed")
 
     cache_manifest = Path("outputs/pipeline_cache.json")
     expected_outputs = [
@@ -115,6 +115,12 @@ def main():
     df_test_s  = apply_scaler(test_raw,  feat_cols, scaler)
     joblib.dump({"scaler": scaler, "feature_cols": feat_cols}, "outputs/models/preprocess.joblib")
 
+    # Save normalized data to data/processed/
+    print("Saving normalized data to data/processed/...")
+    df_train_s.to_csv("data/processed/train_normalized.csv", index=False)
+    df_valid_s.to_csv("data/processed/valid_normalized.csv", index=False)
+    df_test_s.to_csv("data/processed/test_normalized.csv", index=False)
+
     # Ablations
     step = int(cfg["features"]["step"])
     rows = []
@@ -124,6 +130,11 @@ def main():
         tr = make_tabular_window_features(df_train_s, feat_cols, int(w), step, cap)
         va = make_tabular_window_features(df_valid_s, feat_cols, int(w), step, cap)
         te = make_tabular_window_features(df_test_s,  feat_cols, int(w), step, cap)
+
+        # Save XGB features to data/processed/
+        tr.to_csv(f"data/processed/xgb_features_w{int(w)}_train.csv", index=False)
+        va.to_csv(f"data/processed/xgb_features_w{int(w)}_valid.csv", index=False)
+        te.to_csv(f"data/processed/xgb_features_w{int(w)}_test.csv", index=False)
 
         feature_names = [c for c in tr.columns if c not in ["unit_id","cycle_end","RUL"]]
         Xtr, ytr = tr[feature_names].values, tr["RUL"].values
@@ -160,9 +171,14 @@ def main():
         lstm_cfg = dict(cfg["lstm"])
         lstm_cfg["window_size"] = int(w)
 
-        Xtr, ytr, _ = make_sequences(df_train_s, feat_cols, int(w), cap, step=step)
-        Xva, yva, _ = make_sequences(df_valid_s, feat_cols, int(w), cap, step=step)
+        Xtr, ytr, meta_tr = make_sequences(df_train_s, feat_cols, int(w), cap, step=step)
+        Xva, yva, meta_va = make_sequences(df_valid_s, feat_cols, int(w), cap, step=step)
         Xte, yte, meta = make_sequences(df_test_s,  feat_cols, int(w), cap, step=step)
+
+        # Save LSTM sequences metadata to data/processed/
+        pd.DataFrame(meta_tr, columns=["unit_id","cycle_end"]).assign(RUL=ytr).to_csv(f"data/processed/lstm_sequences_w{int(w)}_train.csv", index=False)
+        pd.DataFrame(meta_va, columns=["unit_id","cycle_end"]).assign(RUL=yva).to_csv(f"data/processed/lstm_sequences_w{int(w)}_valid.csv", index=False)
+        pd.DataFrame(meta, columns=["unit_id","cycle_end"]).assign(RUL=yte).to_csv(f"data/processed/lstm_sequences_w{int(w)}_test.csv", index=False)
 
         model = train_lstm(Xtr, ytr, Xva, yva, lstm_cfg)
         pred = predict_lstm(model, Xte)
