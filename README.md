@@ -32,17 +32,17 @@ experimentation, and explainable AI in predictive maintenance.
 
 | Model | MAE (window) | RMSE (window) | MAE (unit-last) | RMSE (unit-last) |
 |-------|-------------|--------------|----------------|-----------------|
-| XGBoost | **10.54** | **14.04** | 10.22 | 13.24 |
-| LSTM | **9.87** | 15.06 | 12.10 | 16.42 |
+| XGBoost | **10.61** | **14.08** | 9.56 | 12.59 |
+| LSTM | **10.05** | **14.78** | 12.11 | 16.14 |
 
-LSTM improves MAE by ~6% over the XGBoost baseline. XGBoost shows better
+LSTM and XGBoost are comparable globally (~5% MAE difference). XGBoost shows better
 unit-last metrics, indicating stronger robustness in the critical near-failure zone.
 
 **Anomaly Detection** (p99 threshold on test set):
 
 | Method | Alarm Rate |
 |--------|-----------|
-| Autoencoder | 1.35% |
+| Autoencoder | 1.52% |
 | PCA Baseline | 1.20% |
 
 ------------------------------------------------------------------------
